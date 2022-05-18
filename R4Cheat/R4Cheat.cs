@@ -34,8 +34,6 @@ public class R4CheatHeader
                     return Misc.TryGetEncoding("GBK");
                 case 0x53F5:
                     return Misc.TryGetEncoding("Shift-JIS");
-                // case 0x5375:
-                //     return Encoding.UTF8;
                 default:
                     throw new ArgumentException("Unknown encoding.");
             }
@@ -46,16 +44,12 @@ public class R4CheatHeader
             switch (value.CodePage)
             {
                 case 936:
-                    headerBytes[0x4C] = 0xD5;
-                    headerBytes[0x4D] = 0x53;
-                    break;
-                case 949:
-                    headerBytes[0x4C] = 0xF5;
-                    headerBytes[0x4D] = 0x53;
-                    break;
-                case 65001:
                     headerBytes[0x4C] = 0x53;
                     headerBytes[0x4D] = 0x75;
+                    break;
+                case 932:
+                    headerBytes[0x4C] = 0x53;
+                    headerBytes[0x4D] = 0xF5;
                     break;
                 default:
                     throw new ArgumentException("Unsupported encoding.");
@@ -110,9 +104,9 @@ public class R4CheatTableEntry
 {
     public string GameId { get; set; }
     public uint Hash { get; set; }
-    public uint Offset { get; set; }
+    public int Offset { get; set; }
 
-    public R4CheatTableEntry(string gameId, uint hash, uint offset)
+    public R4CheatTableEntry(string gameId, uint hash, int offset)
     {
         GameId = gameId;
         Hash = hash;
@@ -125,7 +119,7 @@ public class R4CheatTableEntry
         input.Read(buffer, 0, 0x10);
         GameId = Encoding.ASCII.GetString(buffer[0..0x4]);
         Hash = BinaryPrimitives.ReadUInt32LittleEndian(buffer[0x4..0x8]);
-        Offset = BinaryPrimitives.ReadUInt32LittleEndian(buffer[0x8..0xC]);
+        Offset = BinaryPrimitives.ReadInt32LittleEndian(buffer[0x8..0xC]);
 
         if (GameId == "\0\0\0\0" && Hash == 0 && Offset == 0)
         {
@@ -138,6 +132,7 @@ public class R4Cheat
 {
     public R4CheatHeader Header { get; private set; }
     public List<R4CheatTableEntry> Table { get; private set; }
+    public List<R4Game> Games { get; private set; }
     public string Path { get; private set; }
 
     public R4Cheat(string path)
@@ -162,6 +157,29 @@ public class R4Cheat
                 {
                     throw;
                 }
+            }
+        }
+    }
+
+    public async Task LoadAllGames(IProgress<ProgressArgs> progress)
+    {
+        var progressArgs = new ProgressArgs();
+        progressArgs.Max = Table.Count;
+        progressArgs.Current = 0;
+        progress.Report(progressArgs);
+
+        using (var fs = File.OpenRead(Path))
+        {
+            Games = new List<R4Game>();
+            foreach (var entry in Table)
+            {
+                await Task.Run(() =>
+                {
+                    var game = new R4Game(fs, entry.Offset, entry.GameId, entry.Hash, Header.Encoding);
+                    Games.Add(game);
+                });
+                progressArgs.Current++;
+                progress.Report(progressArgs);
             }
         }
     }

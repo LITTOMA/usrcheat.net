@@ -11,11 +11,11 @@ public class R4Code : R4Item
     public List<int> Values { get; set; }
     public bool Enabled { get; set; }
 
-    public R4Code(ushort flags, Stream input)
+    public R4Code(ushort flags, Stream input, System.Text.Encoding encoding)
     {
         this.Enabled = ((flags & (ushort)R4ItemFlag.Enabled) == (ushort)R4ItemFlag.Enabled);
 
-        BinaryReader reader = new BinaryReader(input);
+        BinaryReader reader = new BinaryReader(input, encoding);
         Name = reader.ReadString(BinaryStringType.ZeroTerminated);
         Description = reader.ReadString(BinaryStringType.ZeroTerminated);
         reader.Align(4);

@@ -11,11 +11,11 @@ public class R4Folder : R4Item
     public bool Enabled { get; set; }
     public List<R4Code> Codes { get; private set; }
 
-    public R4Folder(int codesCount, ushort flags, Stream stream)
+    public R4Folder(int codesCount, ushort flags, Stream stream, System.Text.Encoding encoding)
     {
         Enabled = ((flags & (ushort)R4ItemFlag.Enabled) == (ushort)R4ItemFlag.Enabled);
 
-        BinaryReader reader = new BinaryReader(stream);
+        BinaryReader reader = new BinaryReader(stream, encoding);
         Name = reader.ReadString(BinaryStringType.ZeroTerminated);
         Description = reader.ReadString(BinaryStringType.ZeroTerminated);
         reader.Align(4);
@@ -32,7 +32,7 @@ public class R4Folder : R4Item
             }
             else
             {
-                var code = new R4Code(itemFlags, stream);
+                var code = new R4Code(itemFlags, stream, encoding);
                 Codes.Add(code);
             }
         }
