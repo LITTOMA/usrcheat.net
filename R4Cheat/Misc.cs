@@ -1,3 +1,5 @@
+namespace R4Cheat;
+
 using System.Text;
 
 public static class Misc

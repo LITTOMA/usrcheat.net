@@ -8,10 +8,16 @@ using System.Text;
 public class R4CheatHeader
 {
     private byte[] headerBytes;
+    private Encoding? decoding;
 
+    public Encoding Decoding
+    {
+        get => decoding ?? Encoding;
+        set => decoding = value;
+    }
     public string Title
     {
-        get => Encoding.GetString(headerBytes[0x10..0x4C]).TrimEnd('\0');
+        get => Decoding.GetString(headerBytes[0x10..0x4C]).TrimEnd('\0');
         set
         {
             var titleBytes = Encoding.GetBytes(value);
@@ -41,13 +47,13 @@ public class R4CheatHeader
         set
         {
             var title = Title;
-            switch (value.EncodingName)
+            switch (value.CodePage)
             {
-                case "GBK":
+                case 936:
                     headerBytes[0x4C] = 0x75;
                     headerBytes[0x4D] = 0x53;
                     break;
-                case "Shift-JIS":
+                case 932:
                     headerBytes[0x4C] = 0xF5;
                     headerBytes[0x4D] = 0x53;
                     break;
@@ -82,10 +88,11 @@ public class R4CheatHeader
         Title = title;
     }
 
-    public R4CheatHeader(Stream input)
+    public R4CheatHeader(Stream input, Encoding decoding)
     {
         headerBytes = new byte[0x100];
         input.Read(headerBytes, 0, 0x100);
+        Decoding = decoding;
 
         var magic = Encoding.ASCII.GetString(headerBytes[0..0xC]);
         if (magic != "R4 CheatCode")
@@ -130,18 +137,27 @@ public class R4CheatTableEntry
 
 public class R4Cheat
 {
+    private Encoding? decoding;
+
     public R4CheatHeader Header { get; private set; }
     public List<R4CheatTableEntry> Table { get; private set; }
     public List<R4Game> Games { get; private set; }
     public string Path { get; private set; }
+    public Encoding Decoding
+    {
+        get => decoding ?? Header.Encoding;
+        set => decoding = value;
+    }
 
-    public R4Cheat(string path)
+    public R4Cheat(string path, Encoding decoding = null)
     {
         Path = path;
         Games = new List<R4Game>();
+        Decoding = decoding;
+
         using (var input = File.OpenRead(path))
         {
-            Header = new R4CheatHeader(input);
+            Header = new R4CheatHeader(input, decoding);
             input.Position = Header.GameTableOffset;
             Table = new List<R4CheatTableEntry>();
             while (true)
@@ -162,24 +178,23 @@ public class R4Cheat
         }
     }
 
-    public async Task LoadAllGames(IProgress<ProgressArgs> progress)
+    public void LoadAllGames(IProgress<ProgressArgs> progress)
     {
-        var progressArgs = new ProgressArgs();
-        progressArgs.Max = Table.Count;
-        progressArgs.Current = 0;
-        progress.Report(progressArgs);
-
         using (var fs = File.OpenRead(Path))
         {
             Games = new List<R4Game>();
-            foreach (var entry in Table)
+            for (int i = 0; i < Table.Count; i++)
             {
-                await Task.Run(() =>
+                var entry = Table[i];
+                var game = new R4Game(fs, entry.Offset, entry.GameId, entry.Hash, Decoding);
+                Games.Add(game);
+
+                var progressArgs = new ProgressArgs()
                 {
-                    var game = new R4Game(fs, entry.Offset, entry.GameId, entry.Hash, Header.Encoding);
-                    Games.Add(game);
-                });
-                progressArgs.Current++;
+                    Max = Table.Count,
+                    Message = $"Loaded [{game.GameId}] {game.Name}...",
+                    Current = i + 1
+                };
                 progress.Report(progressArgs);
             }
         }
@@ -201,7 +216,7 @@ public class R4Cheat
             using (var fs = File.OpenRead(Path))
             {
                 var entry = Table.First(x => x.GameId == gameId);
-                var game = new R4Game(fs, entry.Offset, entry.GameId, entry.Hash, Header.Encoding);
+                var game = new R4Game(fs, entry.Offset, entry.GameId, entry.Hash, Decoding);
                 Games.Add(game);
                 return game;
             }

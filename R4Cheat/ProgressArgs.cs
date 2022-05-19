@@ -6,4 +6,5 @@ public class ProgressArgs
     public double Current { get; set; }
     public double Progress => Current / Max;
     public double Percentage => Progress * 100;
+    public string Message { get; set; }
 }
