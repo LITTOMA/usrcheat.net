@@ -41,15 +41,15 @@ public class R4CheatHeader
         set
         {
             var title = Title;
-            switch (value.CodePage)
+            switch (value.EncodingName)
             {
-                case 936:
-                    headerBytes[0x4C] = 0x53;
-                    headerBytes[0x4D] = 0x75;
+                case "GBK":
+                    headerBytes[0x4C] = 0x75;
+                    headerBytes[0x4D] = 0x53;
                     break;
-                case 932:
-                    headerBytes[0x4C] = 0x53;
-                    headerBytes[0x4D] = 0xF5;
+                case "Shift-JIS":
+                    headerBytes[0x4C] = 0xF5;
+                    headerBytes[0x4D] = 0x53;
                     break;
                 default:
                     throw new ArgumentException("Unsupported encoding.");
@@ -138,6 +138,7 @@ public class R4Cheat
     public R4Cheat(string path)
     {
         Path = path;
+        Games = new List<R4Game>();
         using (var input = File.OpenRead(path))
         {
             Header = new R4CheatHeader(input);
@@ -180,6 +181,29 @@ public class R4Cheat
                 });
                 progressArgs.Current++;
                 progress.Report(progressArgs);
+            }
+        }
+    }
+
+    public R4Game GetGame(string gameId)
+    {
+        if (Games != null && Games.Count > 0 && Games.Any(x => x.GameId == gameId))
+        {
+            return Games.First(x => x.GameId == gameId);
+        }
+        else
+        {
+            if (Games == null)
+            {
+                Games = new List<R4Game>();
+            }
+
+            using (var fs = File.OpenRead(Path))
+            {
+                var entry = Table.First(x => x.GameId == gameId);
+                var game = new R4Game(fs, entry.Offset, entry.GameId, entry.Hash, Header.Encoding);
+                Games.Add(game);
+                return game;
             }
         }
     }
