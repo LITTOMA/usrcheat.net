@@ -178,7 +178,7 @@ public class R4Cheat
         }
     }
 
-    public void LoadAllGames(IProgress<ProgressArgs> progress)
+    public void LoadAllGames(IProgress<ProgressArgs> progress = null)
     {
         using (var fs = File.OpenRead(Path))
         {
@@ -195,7 +195,7 @@ public class R4Cheat
                     Message = $"Loaded [{game.GameId}] {game.Name}...",
                     Current = i + 1
                 };
-                progress.Report(progressArgs);
+                progress?.Report(progressArgs);
             }
         }
     }

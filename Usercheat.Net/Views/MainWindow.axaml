@@ -1,0 +1,39 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Usercheat.Net.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        x:Class="Usercheat.Net.Views.MainWindow"
+        Icon="/Assets/avalonia-logo.ico"
+        Title="Usercheat.Net">
+
+	<Design.DataContext>
+		<vm:MainWindowViewModel/>
+	</Design.DataContext>
+
+	<Grid>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="*"/>
+		</Grid.RowDefinitions>
+			
+		<Button
+			Grid.Row="0"
+			Content="Open"
+			Command="{Binding OpenCheatFile}"
+			IsEnabled="True"/>
+
+		<TreeView
+			Grid.Row="1"
+			Background="Gray"
+			Items="{Binding Games}">
+			<TreeView.ItemTemplate>
+				<TreeDataTemplate ItemsSource="{Binding Items}">
+					<TextBlock Text="{Binding Name}"/>
+				</TreeDataTemplate>
+			</TreeView.ItemTemplate>
+		</TreeView>
+	</Grid>
+
+</Window>
